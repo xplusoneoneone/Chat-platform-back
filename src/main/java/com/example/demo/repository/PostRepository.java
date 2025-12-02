@@ -180,5 +180,72 @@ public class PostRepository {
         
         return jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
     }
+
+    /**
+     * 检查用户是否已点赞该帖子
+     */
+    public boolean existsLike(Long postId, Long userId) {
+        String sql = "SELECT COUNT(*) FROM post_like WHERE post_id = ? AND user_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, postId, userId);
+        return count != null && count > 0;
+    }
+
+    /**
+     * 添加点赞记录
+     */
+    public void addLike(Long postId, Long userId) {
+        String sql = "INSERT INTO post_like (post_id, user_id, create_time) VALUES (?, ?, ?)";
+        jdbcTemplate.update(sql, postId, userId, LocalDateTime.now());
+    }
+
+    /**
+     * 删除点赞记录
+     */
+    public void removeLike(Long postId, Long userId) {
+        String sql = "DELETE FROM post_like WHERE post_id = ? AND user_id = ?";
+        jdbcTemplate.update(sql, postId, userId);
+    }
+
+    /**
+     * 增加帖子点赞数
+     */
+    public void incrementLikeCount(Long postId) {
+        String sql = "UPDATE post SET `like` = `like` + 1 WHERE id = ?";
+        jdbcTemplate.update(sql, postId);
+    }
+
+    /**
+     * 减少帖子点赞数
+     */
+    public void decrementLikeCount(Long postId) {
+        String sql = "UPDATE post SET `like` = GREATEST(`like` - 1, 0) WHERE id = ?";
+        jdbcTemplate.update(sql, postId);
+    }
+
+    /**
+     * 批量查询用户是否已点赞多个帖子
+     * @param postIds 帖子ID列表
+     * @param userId 用户ID
+     * @return 已点赞的帖子ID集合
+     */
+    public java.util.Set<Long> findLikedPostIds(List<Long> postIds, Long userId) {
+        if (postIds == null || postIds.isEmpty()) {
+            return new java.util.HashSet<>();
+        }
+
+        // 构建IN子句的占位符
+        String placeholders = postIds.stream()
+                .map(id -> "?")
+                .reduce((a, b) -> a + "," + b)
+                .orElse("");
+
+        String sql = "SELECT post_id FROM post_like WHERE post_id IN (" + placeholders + ") AND user_id = ?";
+        
+        List<Object> params = new ArrayList<>(postIds);
+        params.add(userId);
+
+        List<Long> likedPostIds = jdbcTemplate.queryForList(sql, params.toArray(), Long.class);
+        return new java.util.HashSet<>(likedPostIds);
+    }
 }
 

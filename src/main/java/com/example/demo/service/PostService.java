@@ -148,5 +148,61 @@ public class PostService {
 
         return new PageResponse<>(pagedPosts, pageRequest.getPage(), pageRequest.getSize(), total);
     }
+
+    /**
+     * 点赞帖子
+     * @param postId 帖子ID
+     * @param userId 用户ID
+     * @return 更新后的帖子
+     */
+    public Post likePost(Long postId, Long userId) {
+        // 验证帖子是否存在
+        if (postRepository.findById(postId).isEmpty()) {
+            throw new RuntimeException("帖子不存在");
+        }
+
+        // 检查是否已经点赞过
+        if (postRepository.existsLike(postId, userId)) {
+            throw new RuntimeException("您已经点赞过这条帖子");
+        }
+
+        // 添加点赞记录
+        postRepository.addLike(postId, userId);
+
+        // 更新帖子点赞数
+        postRepository.incrementLikeCount(postId);
+
+        // 返回更新后的帖子
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("帖子不存在"));
+    }
+
+    /**
+     * 取消点赞帖子
+     * @param postId 帖子ID
+     * @param userId 用户ID
+     * @return 更新后的帖子
+     */
+    public Post unlikePost(Long postId, Long userId) {
+        // 验证帖子是否存在
+        if (postRepository.findById(postId).isEmpty()) {
+            throw new RuntimeException("帖子不存在");
+        }
+
+        // 检查是否已经点赞过
+        if (!postRepository.existsLike(postId, userId)) {
+            throw new RuntimeException("您还没有点赞过这条帖子");
+        }
+
+        // 删除点赞记录
+        postRepository.removeLike(postId, userId);
+
+        // 更新帖子点赞数
+        postRepository.decrementLikeCount(postId);
+
+        // 返回更新后的帖子
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("帖子不存在"));
+    }
 }
 
