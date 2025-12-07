@@ -11,16 +11,18 @@ public class UpdateUserInfoRequest {
     private String avatar;
     private String signature;
     private String sex;
+    private String location;
 
     public UpdateUserInfoRequest() {
     }
 
-    public UpdateUserInfoRequest(Long userId, String username, String avatar, String signature, String sex) {
+    public UpdateUserInfoRequest(Long userId, String username, String avatar, String signature, String sex, String location) {
         this.userId = userId;
         this.username = username;
         this.avatar = avatar;
         this.signature = signature;
         this.sex = sex;
+        this.location = location;
     }
 
     public Long getUserId() {
@@ -61,6 +63,14 @@ public class UpdateUserInfoRequest {
 
     public void setSex(String sex) {
         this.sex = sex;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
     }
 }
 

@@ -140,6 +140,7 @@ public class PostController {
                     userData.put("username", user.getUsername());
                     userData.put("avatar", user.getAvatar());
                     userData.put("sex", user.getSex());
+                    userData.put("location", user.getLocation());
                     userData.put("signature", user.getSignature());
                     postData.put("user", userData);
                 }

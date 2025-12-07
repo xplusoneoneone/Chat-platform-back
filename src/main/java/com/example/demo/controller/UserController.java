@@ -165,6 +165,24 @@ public class UserController {
     }
 
     /**
+     * 用户退出登录接口
+     * @param userId 用户ID
+     * @return 退出登录结果
+     */
+    @PostMapping("/logout")
+    public ApiResponse<Object> logout(@RequestParam("userId") Long userId) {
+        try {
+            // 调用服务层退出登录
+            userService.logout(userId);
+            return ApiResponse.success("退出登录成功", null);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(400, e.getMessage());
+        } catch (Exception e) {
+            return ApiResponse.error("退出登录失败：" + e.getMessage());
+        }
+    }
+
+    /**
      * 获取用户信息接口
      * @param userId 用户ID
      * @return 用户信息（姓名、头像、个性签名）
@@ -195,6 +213,7 @@ public class UserController {
         userData.put("username", user.getUsername());
         userData.put("avatar", user.getAvatar());
         userData.put("sex", user.getSex());
+        userData.put("location", user.getLocation());
         userData.put("signature", user.getSignature());
         userData.put("createTime", user.getCreateTime());
         return userData;
@@ -207,6 +226,8 @@ public class UserController {
         Map<String, Object> userInfo = new HashMap<>();
         userInfo.put("username", user.getUsername());
         userInfo.put("avatar", user.getAvatar());
+        userInfo.put("sex", user.getSex());
+        userInfo.put("location", user.getLocation());
         userInfo.put("signature", user.getSignature());
         return userInfo;
     }

@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.entity.Friend;
+import com.example.demo.entity.FriendRequest;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.FriendService;
@@ -27,18 +28,37 @@ public class FriendController {
     private UserRepository userRepository;
 
     /**
-     * 添加好友接口
+     * 添加好友接口（发送好友申请）
      * @param userId 用户ID
      * @param friendId 好友ID
      * @return 操作结果
      */
     @PostMapping("/add")
-    public ApiResponse<Object> addFriend(
+    public ApiResponse<Map<String, Object>> addFriend(
             @RequestParam("userId") Long userId,
             @RequestParam("friendId") Long friendId) {
         try {
-            friendService.addFriend(userId, friendId);
-            return ApiResponse.success("添加好友成功", null);
+            FriendRequest request = friendService.addFriend(userId, friendId);
+            
+            // 查询申请者信息
+            User requester = userRepository.findById(request.getRequesterId()).orElse(null);
+            
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("id", request.getId());
+            requestData.put("requesterId", request.getRequesterId());
+            requestData.put("receiverId", request.getReceiverId());
+            requestData.put("status", request.getStatus());
+            requestData.put("createTime", request.getCreateTime());
+            
+            if (requester != null) {
+                Map<String, Object> requesterData = new HashMap<>();
+                requesterData.put("id", requester.getId());
+                requesterData.put("username", requester.getUsername());
+                requesterData.put("avatar", requester.getAvatar());
+                requestData.put("requester", requesterData);
+            }
+            
+            return ApiResponse.success("好友申请已发送，等待对方同意", requestData);
         } catch (RuntimeException e) {
             return ApiResponse.error(400, e.getMessage());
         } catch (Exception e) {
@@ -89,7 +109,9 @@ public class FriendController {
                     friendData.put("username", friend.getUsername());
                     friendData.put("avatar", friend.getAvatar());
                     friendData.put("sex", friend.getSex());
+                    friendData.put("location", friend.getLocation());
                     friendData.put("signature", friend.getSignature());
+                    friendData.put("isLogging", friend.getIsLogging() != null ? friend.getIsLogging() : 0); // 在线状态
                     friendData.put("remark", friendRelation.getRemark()); // 备注信息
                     friendData.put("createTime", friendRelation.getCreateTime());
                     friendList.add(friendData);
@@ -158,6 +180,150 @@ public class FriendController {
             return ApiResponse.error(400, e.getMessage());
         } catch (Exception e) {
             return ApiResponse.error("设置备注失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 发送好友申请接口
+     * @param requesterId 申请者ID
+     * @param receiverId 接收者ID
+     * @return 操作结果
+     */
+    @PostMapping("/request")
+    public ApiResponse<Map<String, Object>> sendFriendRequest(
+            @RequestParam("requesterId") Long requesterId,
+            @RequestParam("receiverId") Long receiverId) {
+        try {
+            FriendRequest request = friendService.sendFriendRequest(requesterId, receiverId);
+            
+            // 查询申请者信息
+            User requester = userRepository.findById(request.getRequesterId()).orElse(null);
+            
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("id", request.getId());
+            requestData.put("requesterId", request.getRequesterId());
+            requestData.put("receiverId", request.getReceiverId());
+            requestData.put("status", request.getStatus());
+            requestData.put("createTime", request.getCreateTime());
+            
+            if (requester != null) {
+                Map<String, Object> requesterData = new HashMap<>();
+                requesterData.put("id", requester.getId());
+                requesterData.put("username", requester.getUsername());
+                requesterData.put("avatar", requester.getAvatar());
+                requestData.put("requester", requesterData);
+            }
+            
+            return ApiResponse.success("发送好友申请成功", requestData);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(400, e.getMessage());
+        } catch (Exception e) {
+            return ApiResponse.error("发送好友申请失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取待处理的好友申请列表接口
+     * @param receiverId 接收者ID（当前用户）
+     * @return 好友申请列表
+     */
+    @GetMapping("/requests")
+    public ApiResponse<List<Map<String, Object>>> getFriendRequests(@RequestParam("receiverId") Long receiverId) {
+        try {
+            List<FriendRequest> requests = friendService.getPendingFriendRequests(receiverId);
+            
+            // 构建返回数据（包含申请者信息）
+            List<Map<String, Object>> requestList = new ArrayList<>();
+            for (FriendRequest request : requests) {
+                // 查询申请者信息
+                User requester = userRepository.findById(request.getRequesterId()).orElse(null);
+                
+                Map<String, Object> requestData = new HashMap<>();
+                requestData.put("id", request.getId());
+                requestData.put("requesterId", request.getRequesterId());
+                requestData.put("receiverId", request.getReceiverId());
+                requestData.put("status", request.getStatus());
+                requestData.put("createTime", request.getCreateTime());
+                requestData.put("updateTime", request.getUpdateTime());
+                
+                // 添加申请者信息
+                if (requester != null) {
+                    Map<String, Object> requesterData = new HashMap<>();
+                    requesterData.put("id", requester.getId());
+                    requesterData.put("username", requester.getUsername());
+                    requesterData.put("avatar", requester.getAvatar());
+                    requesterData.put("sex", requester.getSex());
+                    requesterData.put("signature", requester.getSignature());
+                    requestData.put("requester", requesterData);
+                }
+                
+                requestList.add(requestData);
+            }
+            
+            return ApiResponse.success("获取好友申请列表成功", requestList);
+        } catch (Exception e) {
+            return ApiResponse.error("获取好友申请列表失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 同意好友申请接口
+     * @param requestId 申请ID
+     * @param receiverId 接收者ID（当前用户）
+     * @return 操作结果
+     */
+    @PostMapping("/request/{requestId}/accept")
+    public ApiResponse<Map<String, Object>> acceptFriendRequest(
+            @PathVariable("requestId") Long requestId,
+            @RequestParam("receiverId") Long receiverId) {
+        try {
+            Friend friend = friendService.acceptFriendRequest(requestId, receiverId);
+            
+            // 查询好友信息
+            User friendUser = userRepository.findById(friend.getFriendId()).orElse(null);
+            
+            Map<String, Object> friendData = new HashMap<>();
+            friendData.put("id", friend.getId());
+            friendData.put("userId", friend.getUserId());
+            friendData.put("friendId", friend.getFriendId());
+            friendData.put("remark", friend.getRemark());
+            friendData.put("createTime", friend.getCreateTime());
+            
+            if (friendUser != null) {
+                Map<String, Object> userData = new HashMap<>();
+                userData.put("id", friendUser.getId());
+                userData.put("username", friendUser.getUsername());
+                userData.put("avatar", friendUser.getAvatar());
+                userData.put("sex", friendUser.getSex());
+                userData.put("signature", friendUser.getSignature());
+                friendData.put("friend", userData);
+            }
+            
+            return ApiResponse.success("同意好友申请成功", friendData);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(400, e.getMessage());
+        } catch (Exception e) {
+            return ApiResponse.error("同意好友申请失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 拒绝好友申请接口
+     * @param requestId 申请ID
+     * @param receiverId 接收者ID（当前用户）
+     * @return 操作结果
+     */
+    @PostMapping("/request/{requestId}/reject")
+    public ApiResponse<Object> rejectFriendRequest(
+            @PathVariable("requestId") Long requestId,
+            @RequestParam("receiverId") Long receiverId) {
+        try {
+            friendService.rejectFriendRequest(requestId, receiverId);
+            return ApiResponse.success("拒绝好友申请成功", null);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(400, e.getMessage());
+        } catch (Exception e) {
+            return ApiResponse.error("拒绝好友申请失败：" + e.getMessage());
         }
     }
 }

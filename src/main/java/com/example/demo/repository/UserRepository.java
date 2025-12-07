@@ -26,7 +26,7 @@ public class UserRepository {
      * 根据用户名查找用户
      */
     public Optional<User> findByUsername(String username) {
-        String sql = "SELECT id, username, password, avatar, sex, signature, create_time as createTime " +
+        String sql = "SELECT id, username, password, avatar, sex, signature, location, is_logging as isLogging, create_time as createTime " +
                      "FROM user WHERE username = ?";
         try {
             User user = jdbcTemplate.queryForObject(sql, 
@@ -41,7 +41,7 @@ public class UserRepository {
      * 根据ID查找用户
      */
     public Optional<User> findById(Long id) {
-        String sql = "SELECT id, username, password, avatar, sex, signature, create_time as createTime " +
+        String sql = "SELECT id, username, password, avatar, sex, signature, location, is_logging as isLogging, create_time as createTime " +
                      "FROM user WHERE id = ?";
         try {
             User user = jdbcTemplate.queryForObject(sql, 
@@ -56,7 +56,7 @@ public class UserRepository {
      * 保存用户（注册）
      */
     public User save(User user) {
-        String sql = "INSERT INTO user (username, password, avatar, create_time) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO user (username, password, avatar, sex, signature, location, create_time, is_logging) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         KeyHolder keyHolder = new GeneratedKeyHolder();
         
@@ -65,7 +65,11 @@ public class UserRepository {
             ps.setString(1, user.getUsername());
             ps.setString(2, user.getPassword());
             ps.setString(3, user.getAvatar() != null ? user.getAvatar() : "https://xxx.com/default-avatar.png");
-            ps.setObject(4, user.getCreateTime() != null ? user.getCreateTime() : LocalDateTime.now());
+            ps.setString(4, user.getSex());
+            ps.setString(5, user.getSignature());
+            ps.setString(6, user.getLocation());
+            ps.setObject(7, user.getCreateTime() != null ? user.getCreateTime() : LocalDateTime.now());
+            ps.setInt(8, user.getIsLogging() != null ? user.getIsLogging() : 0);
             return ps;
         }, keyHolder);
         
@@ -101,7 +105,7 @@ public class UserRepository {
     /**
      * 更新用户信息（只更新非空字段）
      */
-    public void updateUserInfo(Long userId, String username, String avatar, String signature, String sex) {
+    public void updateUserInfo(Long userId, String username, String avatar, String signature, String sex, String location) {
         StringBuilder sql = new StringBuilder("UPDATE user SET ");
         java.util.List<Object> params = new java.util.ArrayList<>();
         boolean hasUpdate = false;
@@ -139,6 +143,15 @@ public class UserRepository {
             hasUpdate = true;
         }
 
+        if (location != null) {
+            if (hasUpdate) {
+                sql.append(", ");
+            }
+            sql.append("location = ?");
+            params.add(location);
+            hasUpdate = true;
+        }
+
         if (!hasUpdate) {
             // 如果没有要更新的字段，直接返回
             return;
@@ -148,6 +161,14 @@ public class UserRepository {
         params.add(userId);
 
         jdbcTemplate.update(sql.toString(), params.toArray());
+    }
+
+    /**
+     * 更新用户登录状态
+     */
+    public void updateLoginStatus(Long userId, Integer isLogging) {
+        String sql = "UPDATE user SET is_logging = ? WHERE id = ?";
+        jdbcTemplate.update(sql, isLogging, userId);
     }
 }
 

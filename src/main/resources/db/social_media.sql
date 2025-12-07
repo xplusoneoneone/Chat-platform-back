@@ -11,7 +11,7 @@
  Target Server Version : 80038
  File Encoding         : 65001
 
- Date: 01/12/2025 20:26:24
+ Date: 07/12/2025 12:13:10
 */
 
 SET NAMES utf8mb4;
@@ -36,7 +36,7 @@ CREATE TABLE `comment`  (
   CONSTRAINT `fk_comment_parent` FOREIGN KEY (`parent_id`) REFERENCES `comment` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_comment_post` FOREIGN KEY (`post_id`) REFERENCES `post` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_comment_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '动态评论表（支持回复）' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '动态评论表（支持回复）' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for comment_like
@@ -71,7 +71,27 @@ CREATE TABLE `friend`  (
   INDEX `idx_friend_id`(`friend_id`) USING BTREE,
   CONSTRAINT `fk_friend_friend` FOREIGN KEY (`friend_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_friend_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '好友关系表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '好友关系表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for friend_request
+-- ----------------------------
+DROP TABLE IF EXISTS `friend_request`;
+CREATE TABLE `friend_request`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '申请记录唯一ID',
+  `requester_id` bigint UNSIGNED NOT NULL COMMENT '申请者ID',
+  `receiver_id` bigint UNSIGNED NOT NULL COMMENT '接收者ID',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending' COMMENT '状态：pending(待处理), accepted(已同意), rejected(已拒绝)',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申请时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_requester_receiver`(`requester_id`, `receiver_id`) USING BTREE,
+  INDEX `idx_requester_id`(`requester_id`) USING BTREE,
+  INDEX `idx_receiver_id`(`receiver_id`) USING BTREE,
+  INDEX `idx_status`(`status`) USING BTREE,
+  CONSTRAINT `fk_request_receiver` FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_request_requester` FOREIGN KEY (`requester_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '好友申请表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for post
@@ -86,7 +106,7 @@ CREATE TABLE `post`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_user_id`(`user_id`) USING BTREE,
   CONSTRAINT `fk_post_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 17 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户动态表（支持多图片）' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户动态表（支持多图片）' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for post_image
@@ -103,7 +123,24 @@ CREATE TABLE `post_image`  (
   INDEX `idx_post_id`(`post_id`) USING BTREE,
   INDEX `idx_sort_order`(`post_id`, `sort_order`) USING BTREE,
   CONSTRAINT `fk_image_post` FOREIGN KEY (`post_id`) REFERENCES `post` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 24 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '动态图片表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '动态图片表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for post_like
+-- ----------------------------
+DROP TABLE IF EXISTS `post_like`;
+CREATE TABLE `post_like`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '点赞记录唯一ID',
+  `post_id` bigint UNSIGNED NOT NULL COMMENT '被点赞的帖子ID',
+  `user_id` bigint UNSIGNED NOT NULL COMMENT '点赞用户ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '点赞时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_post_user`(`post_id`, `user_id`) USING BTREE,
+  INDEX `idx_post_id`(`post_id`) USING BTREE,
+  INDEX `idx_user_id`(`user_id`) USING BTREE,
+  CONSTRAINT `fk_like_post` FOREIGN KEY (`post_id`) REFERENCES `post` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_like_user_post` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '帖子点赞表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for user
@@ -117,8 +154,10 @@ CREATE TABLE `user`  (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '用户创建时间',
   `sex` char(5) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '性别',
   `signature` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '个性签名',
+  `is_logging` bit(1) NOT NULL COMMENT '用户是否在线',
+  `location` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '用户地区',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_username`(`username`) USING BTREE COMMENT '用户名唯一索引'
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户信息表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户信息表' ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;

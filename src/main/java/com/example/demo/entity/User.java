@@ -12,18 +12,22 @@ public class User {
     private String avatar;
     private String sex;
     private String signature;
+    private String location;
+    private Integer isLogging;
     private LocalDateTime createTime;
 
     public User() {
     }
 
-    public User(Long id, String username, String password, String avatar, String sex, String signature, LocalDateTime createTime) {
+    public User(Long id, String username, String password, String avatar, String sex, String signature, String location, Integer isLogging, LocalDateTime createTime) {
         this.id = id;
         this.username = username;
         this.password = password;
         this.avatar = avatar;
         this.sex = sex;
         this.signature = signature;
+        this.location = location;
+        this.isLogging = isLogging;
         this.createTime = createTime;
     }
 
@@ -73,6 +77,22 @@ public class User {
 
     public void setSignature(String signature) {
         this.signature = signature;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public Integer getIsLogging() {
+        return isLogging;
+    }
+
+    public void setIsLogging(Integer isLogging) {
+        this.isLogging = isLogging;
     }
 
     public LocalDateTime getCreateTime() {

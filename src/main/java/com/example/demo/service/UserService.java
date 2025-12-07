@@ -41,8 +41,10 @@ public class UserService {
         // 使用BCrypt加密密码
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setAvatar("");
+        user.setSex("男");
+        user.setLocation(null);
         user.setCreateTime(LocalDateTime.now());
-
+        user.setIsLogging(0);
         // 保存用户
         return userRepository.save(user);
     }
@@ -78,7 +80,26 @@ public class UserService {
             throw new RuntimeException("用户名或密码错误");
         }
 
-        return user;
+        // 更新登录状态为在线
+        userRepository.updateLoginStatus(user.getId(), 1);
+
+        // 重新查询用户信息以获取更新后的状态
+        return userRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+    }
+
+    /**
+     * 用户退出登录
+     * @param userId 用户ID
+     */
+    public void logout(Long userId) {
+        // 验证用户是否存在
+        if (userRepository.findById(userId).isEmpty()) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        // 更新登录状态为离线
+        userRepository.updateLoginStatus(userId, 0);
     }
 
     /**
@@ -189,7 +210,8 @@ public class UserService {
                 request.getUsername(),
                 request.getAvatar(),
                 request.getSignature(),
-                request.getSex()
+                request.getSex(),
+                request.getLocation()
         );
 
         // 返回更新后的用户信息
